@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "e_increasing_subsequences",
     "main",
     "algo_lib",
 ]

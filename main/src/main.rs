@@ -1,15 +1,110 @@
-use std::marker::PhantomData;
-use std::io::Read;
-use std::fmt::Debug;
-use std::str::FromStr;
-use std::io::Write;
+// https://codeforces.com/problemset/problem/1922/E
+pub mod solution {
+//{"name":"E. Increasing Subsequences","group":"Codeforces - Educational Codeforces Round 161 (Rated for Div. 2)","url":"https://codeforces.com/problemset/problem/1922/E","interactive":false,"timeLimit":2000,"tests":[{"input":"4\n2\n5\n13\n37\n","output":"1\n0\n3\n0 1 0\n5\n2 2 3 4 2\n7\n-1 -1 0 0 2 3 -1\n"}],"testType":"single","input":{"type":"stdin","fileName":null,"pattern":null},"output":{"type":"stdout","fileName":null,"pattern":null},"languages":{"java":{"taskClass":"EIncreasingSubsequences"}}}
 
+use crate::algo_lib::io::input::Input;
+use crate::algo_lib::io::output::Output;
+
+type PreCalc = ();
+
+/**
+ * 0 1 2 3 4 .. N-1
+ * 
+ * 2^N
+ */
+fn solve(input: &mut Input, out: &mut Output, _test_case: usize, _data: &PreCalc) {
+    let x = input.read_long();
+    let mut bits = vec![0; 0];
+    for i in 0..63 {
+        if ((1 << i) & x) > 0 {
+            bits.push(i);
+        }
+    }
+
+    let mut ans = vec![0; 0];
+    let max_bit = *bits.last().unwrap();
+    let mut ans: Vec<i32> = (0..max_bit).collect();
+    bits.pop();
+    let mut counter = -(bits.len() as i32);
+    for bit_pos in bits {
+        let insert_pos = max_bit - bit_pos;
+        ans.insert(insert_pos as usize, counter);
+        counter += 1;
+    }
+
+    out.print_line(ans.len());
+    for ans_elem in ans {
+        out.print(ans_elem);
+        out.print(" ");
+    }
+    out.print_line("");
+}
+
+pub(crate) fn run(mut input: Input, mut output: Output) -> bool {
+    let pre_calc = ();
+
+    #[allow(dead_code)]
+    enum TestType {
+        Single,
+        MultiNumber,
+        MultiEof,
+    }
+    let test_type = TestType::MultiNumber;
+    match test_type {
+        TestType::Single => solve(&mut input, &mut output, 1, &pre_calc),
+        TestType::MultiNumber => {
+            let t = input.read();
+            for i in 0usize..t {
+                solve(&mut input, &mut output, i + 1, &pre_calc);
+            }
+        }
+        TestType::MultiEof => {
+            let mut i = 1;
+            while input.peek().is_some() {
+                solve(&mut input, &mut output, i, &pre_calc);
+                i += 1;
+            }
+        }
+    }
+    output.flush();
+    input.skip_whitespace();
+    input.peek().is_none()
+}
+
+
+}
+pub mod algo_lib {
+pub mod io {
+pub mod input {
+use std::fmt::Debug;
+use std::io::Read;
+use std::str::FromStr;
 
 pub struct Input<'s> {
     input: &'s mut dyn Read,
     buf: Vec<u8>,
     at: usize,
     buf_read: usize,
+}
+
+macro_rules! read_impl {
+    ($t: ty, $read_name: ident, $read_vec_name: ident) => {
+        pub fn $read_name(&mut self) -> $t {
+            self.read()
+        }
+
+        pub fn $read_vec_name(&mut self, len: usize) -> Vec<$t> {
+            self.read_vec(len)
+        }
+    };
+
+    ($t: ty, $read_name: ident, $read_vec_name: ident, $read_pair_vec_name: ident) => {
+        read_impl!($t, $read_name, $read_vec_name);
+
+        pub fn $read_pair_vec_name(&mut self, len: usize) -> Vec<($t, $t)> {
+            self.read_vec(len)
+        }
+    };
 }
 
 impl<'s> Input<'s> {
@@ -37,6 +132,12 @@ impl<'s> Input<'s> {
         if self.refill_buffer() {
             let res = self.buf[self.at];
             self.at += 1;
+            if res == b'\r' {
+                if self.refill_buffer() && self.buf[self.at] == b'\n' {
+                    self.at += 1;
+                }
+                return Some(b'\n');
+            }
             Some(res)
         } else {
             None
@@ -45,7 +146,8 @@ impl<'s> Input<'s> {
 
     pub fn peek(&mut self) -> Option<u8> {
         if self.refill_buffer() {
-            Some(self.buf[self.at])
+            let res = self.buf[self.at];
+            Some(if res == b'\r' { b'\n' } else { res })
         } else {
             None
         }
@@ -87,10 +189,19 @@ impl<'s> Input<'s> {
 
     pub fn read_vec<T: Readable>(&mut self, size: usize) -> Vec<T> {
         let mut res = Vec::with_capacity(size);
-        for _ in 0usize..size {
+        for _ in 0..size {
             res.push(self.read());
         }
         res
+    }
+
+    fn read_string(&mut self) -> String {
+        match self.next_token() {
+            None => {
+                panic!("Input exhausted");
+            }
+            Some(res) => unsafe { String::from_utf8_unchecked(res) },
+        }
     }
 
     pub fn read_line(&mut self) -> String {
@@ -110,39 +221,26 @@ impl<'s> Input<'s> {
         res
     }
 
-    #[allow(clippy::should_implement_trait)]
-    pub fn into_iter<T: Readable>(self) -> InputIterator<'s, T> {
-        InputIterator {
-            input: self,
-            phantom: Default::default(),
-        }
-    }
-
     fn read_integer<T: FromStr>(&mut self) -> T
-    where
-        <T as FromStr>::Err: Debug,
+        where
+            <T as FromStr>::Err: Debug,
     {
         let res = self.read_string();
         res.parse::<T>().unwrap()
     }
 
-    fn read_string(&mut self) -> String {
-        match self.next_token() {
-            None => {
-                panic!("Input exhausted");
-            }
-            Some(res) => unsafe { String::from_utf8_unchecked(res) },
-        }
-    }
 
-    fn read_char(&mut self) -> char {
+    pub fn read_char(&mut self) -> char {
         self.skip_whitespace();
         self.get().unwrap().into()
     }
 
-    fn read_float(&mut self) -> f64 {
-        self.read_string().parse().unwrap()
-    }
+    read_impl!(u32, read_unsigned, read_unsigned_vec);
+    read_impl!(u64, read_u64, read_u64_vec);
+    read_impl!(usize, read_size, read_size_vec, read_size_pair_vec);
+    read_impl!(i32, read_int, read_int_vec, read_int_pair_vec);
+    read_impl!(i64, read_long, read_long_vec, read_long_pair_vec);
+    read_impl!(i128, read_i128, read_i128_vec);
 
     fn refill_buffer(&mut self) -> bool {
         if self.at == self.buf_read {
@@ -159,21 +257,9 @@ pub trait Readable {
     fn read(input: &mut Input) -> Self;
 }
 
-impl Readable for String {
-    fn read(input: &mut Input) -> Self {
-        input.read_string()
-    }
-}
-
 impl Readable for char {
     fn read(input: &mut Input) -> Self {
         input.read_char()
-    }
-}
-
-impl Readable for f64 {
-    fn read(input: &mut Input) -> Self {
-        input.read_float()
     }
 }
 
@@ -184,45 +270,20 @@ impl<T: Readable> Readable for Vec<T> {
     }
 }
 
-pub struct InputIterator<'s, T: Readable> {
-    input: Input<'s>,
-    phantom: PhantomData<T>,
-}
-
-impl<'s, T: Readable> Iterator for InputIterator<'s, T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.input.skip_whitespace();
-        self.input.peek().map(|_| self.input.read())
-    }
-}
-
 macro_rules! read_integer {
-    ($t:ident) => {
+    ($($t:ident)+) => {$(
         impl Readable for $t {
             fn read(input: &mut Input) -> Self {
                 input.read_integer()
             }
         }
-    };
+    )+};
 }
 
-read_integer!(i8);
-read_integer!(i16);
-read_integer!(i32);
-read_integer!(i64);
-read_integer!(i128);
-read_integer!(isize);
-read_integer!(u8);
-read_integer!(u16);
-read_integer!(u32);
-read_integer!(u64);
-read_integer!(u128);
-read_integer!(usize);
+read_integer!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 
 macro_rules! tuple_readable {
-    ( $( $name:ident )+ ) => {
+    ($($name:ident)+) => {
         impl<$($name: Readable), +> Readable for ($($name,)+) {
             fn read(input: &mut Input) -> Self {
                 ($($name::read(input),)+)
@@ -243,18 +304,21 @@ tuple_readable! {T U V X Y Z A B C}
 tuple_readable! {T U V X Y Z A B C D}
 tuple_readable! {T U V X Y Z A B C D E}
 tuple_readable! {T U V X Y Z A B C D E F}
+}
+pub mod output {
+use std::io::Write;
 
-pub struct Output {
-    output: Box<dyn Write>,
+pub struct Output<'s> {
+    output: &'s mut dyn Write,
     buf: Vec<u8>,
     at: usize,
     auto_flush: bool,
 }
 
-impl Output {
+impl<'s> Output<'s> {
     const DEFAULT_BUF_SIZE: usize = 4096;
 
-    pub fn new(output: Box<dyn Write>) -> Self {
+    pub fn new(output: &'s mut dyn Write) -> Self {
         Self {
             output,
             buf: vec![0; Self::DEFAULT_BUF_SIZE],
@@ -263,7 +327,7 @@ impl Output {
         }
     }
 
-    pub fn new_with_auto_flush(output: Box<dyn Write>) -> Self {
+    pub fn new_with_auto_flush(output: &'s mut dyn Write) -> Self {
         Self {
             output,
             buf: vec![0; Self::DEFAULT_BUF_SIZE],
@@ -275,12 +339,19 @@ impl Output {
     pub fn flush(&mut self) {
         if self.at != 0 {
             self.output.write_all(&self.buf[..self.at]).unwrap();
+            self.output.flush().unwrap();
             self.at = 0;
+            self.output.flush().expect("Couldn't flush output");
         }
     }
 
-    pub fn print<T: Writable>(&mut self, s: &T) {
+    pub fn print<T: Writable>(&mut self, s: T) {
         s.write(self);
+    }
+
+    pub fn print_line<T: Writable>(&mut self, s: T) {
+        self.print(s);
+        self.put(b'\n');
     }
 
     pub fn put(&mut self, b: u8) {
@@ -329,7 +400,7 @@ impl Output {
     }
 }
 
-impl Write for Output {
+impl Write for Output<'_> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let mut start = 0usize;
         let mut rem = buf.len();
@@ -343,9 +414,7 @@ impl Write for Output {
             start += len;
             rem -= len;
         }
-        if self.auto_flush {
-            self.flush();
-        }
+        self.maybe_flush();
         Ok(buf.len())
     }
 
@@ -383,109 +452,81 @@ impl<T: Writable> Writable for [T] {
     }
 }
 
+impl<T: Writable, const N: usize> Writable for [T; N] {
+    fn write(&self, output: &mut Output) {
+        output.print_iter_ref(self.iter());
+    }
+}
+
+impl<T: Writable> Writable for &T {
+    fn write(&self, output: &mut Output) {
+        T::write(self, output)
+    }
+}
+
 impl<T: Writable> Writable for Vec<T> {
     fn write(&self, output: &mut Output) {
-        self[..].write(output);
+        self.as_slice().write(output);
     }
 }
 
 macro_rules! write_to_string {
-    ($t:ident) => {
+    ($($t:ident)+) => {$(
         impl Writable for $t {
             fn write(&self, output: &mut Output) {
                 self.to_string().write(output);
             }
         }
-    };
+    )+};
 }
 
-write_to_string!(u8);
-write_to_string!(u16);
-write_to_string!(u32);
-write_to_string!(u64);
-write_to_string!(u128);
-write_to_string!(usize);
-write_to_string!(i8);
-write_to_string!(i16);
-write_to_string!(i32);
-write_to_string!(i64);
-write_to_string!(i128);
-write_to_string!(isize);
-write_to_string!(f32);
-write_to_string!(f64);
+write_to_string!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
 
-impl<T: Writable, U: Writable> Writable for (T, U) {
-    fn write(&self, output: &mut Output) {
-        self.0.write(output);
-        output.put(b' ');
-        self.1.write(output);
-    }
-}
-
-impl<T: Writable, U: Writable, V: Writable> Writable for (T, U, V) {
-    fn write(&self, output: &mut Output) {
-        self.0.write(output);
-        output.put(b' ');
-        self.1.write(output);
-        output.put(b' ');
-        self.2.write(output);
-    }
-}
-
-pub static mut OUTPUT: Option<Output> = None;
-
-pub fn output() -> &'static mut Output {
-    unsafe {
-        match &mut OUTPUT {
-            None => {
-                panic!("Panic");
+macro_rules! tuple_writable {
+    ($name0:ident $($name:ident: $id:tt )*) => {
+        impl<$name0: Writable, $($name: Writable,)*> Writable for ($name0, $($name,)*) {
+            fn write(&self, out: &mut Output) {
+                self.0.write(out);
+                $(
+                out.put(b' ');
+                self.$id.write(out);
+                )*
             }
-            Some(output) => output,
         }
     }
 }
 
-#[macro_export]
-macro_rules! out {
-    ($first: expr $(,$args:expr )*) => {
-        output().print(&$first);
-        $(output().put(b' ');
-        output().print(&$args);
-        )*
+tuple_writable! {T}
+tuple_writable! {T U:1}
+tuple_writable! {T U:1 V:2}
+tuple_writable! {T U:1 V:2 X:3}
+tuple_writable! {T U:1 V:2 X:3 Y:4}
+tuple_writable! {T U:1 V:2 X:3 Y:4 Z:5}
+tuple_writable! {T U:1 V:2 X:3 Y:4 Z:5 A:6}
+
+impl<T: Writable> Writable for Option<T> {
+    fn write(&self, output: &mut Output) {
+        match self {
+            None => (-1).write(output),
+            Some(t) => t.write(output),
+        }
     }
 }
-
-#[macro_export]
-macro_rules! out_line {
-    ($first: expr $(, $args:expr )* ) => {
-        out!($first $(,$args)*);
-        output().put(b'\n');
-    };
-    () => {
-        output().put(b'\n');
-    };
 }
-
-fn solve(input: &mut Input, _test_case: usize) {
-    
 }
-
-pub(crate) fn run(mut input: Input) -> bool {
-    let t = input.read();
-    for i in 0usize..t {
-        solve(&mut input, i + 1);
-    }
-    output().flush();
-    input.skip_whitespace();
-    !input.peek().is_some()
 }
-
-
 fn main() {
     let mut sin = std::io::stdin();
-    let input = Input::new(&mut sin);
-    unsafe {
-        OUTPUT = Some(Output::new(Box::new(std::io::stdout())));
-    }
-    run(input);
+    let input = if false {
+        crate::algo_lib::io::input::Input::new_with_size(&mut sin, 1)
+    } else {
+        crate::algo_lib::io::input::Input::new(&mut sin)
+    };
+    let mut stdout = std::io::stdout();
+    let output = if false {
+        crate::algo_lib::io::output::Output::new_with_auto_flush(&mut stdout)
+    } else {
+        crate::algo_lib::io::output::Output::new(&mut stdout)
+    };
+    crate::solution::run(input, output);
 }
