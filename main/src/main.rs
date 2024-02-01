@@ -1,43 +1,40 @@
-// https://codeforces.com/problemset/problem/1922/E
+// https://codeforces.com/problemset/problem/1921/D
 pub mod solution {
-//{"name":"E. Increasing Subsequences","group":"Codeforces - Educational Codeforces Round 161 (Rated for Div. 2)","url":"https://codeforces.com/problemset/problem/1922/E","interactive":false,"timeLimit":2000,"tests":[{"input":"4\n2\n5\n13\n37\n","output":"1\n0\n3\n0 1 0\n5\n2 2 3 4 2\n7\n-1 -1 0 0 2 3 -1\n"}],"testType":"single","input":{"type":"stdin","fileName":null,"pattern":null},"output":{"type":"stdout","fileName":null,"pattern":null},"languages":{"java":{"taskClass":"EIncreasingSubsequences"}}}
+//{"name":"D. Very Different Array","group":"Codeforces - Codeforces Round 920 (Div. 3)","url":"https://codeforces.com/problemset/problem/1921/D","interactive":false,"timeLimit":2000,"tests":[{"input":"9\n4 6\n6 1 2 4\n3 5 1 7 2 3\n3 4\n1 1 1\n1 1 1 1\n5 5\n1 2 3 4 5\n1 2 3 4 5\n2 6\n5 8\n8 7 5 8 2 10\n2 2\n4 1\n9 6\n4 6\n8 10 6 4\n3 10 6 1 8 9\n3 5\n6 5 2\n1 7 9 7 2\n5 5\n9 10 6 3 7\n5 9 2 3 9\n1 6\n3\n2 7 10 1 1 5\n","output":"16\n0\n12\n11\n10\n23\n15\n25\n7\n"}],"testType":"single","input":{"type":"stdin","fileName":null,"pattern":null},"output":{"type":"stdout","fileName":null,"pattern":null},"languages":{"java":{"taskClass":"DVeryDifferentArray"}}}
 
 use crate::algo_lib::io::input::Input;
 use crate::algo_lib::io::output::Output;
 
 type PreCalc = ();
 
-/**
- * 0 1 2 3 4 .. N-1
- * 
- * 2^N
- */
 fn solve(input: &mut Input, out: &mut Output, _test_case: usize, _data: &PreCalc) {
-    let x = input.read_long();
-    let mut bits = vec![0; 0];
-    for i in 0..63 {
-        if ((1 << i) & x) > 0 {
-            bits.push(i);
+    let n = input.read_size();
+    let m = input.read_size();
+    let mut a = input.read_long_vec(n);
+    let mut b = input.read_long_vec(m);
+    a.sort();
+    let mut sum_a = vec![0; n + 1];
+    for i in 1..=n {
+        sum_a[i] = sum_a[i - 1] + a[i - 1];
+    }
+    b.sort();
+    let mut sum_b = vec![0; m + 1];
+    for i in 1..=m {
+        sum_b[i] = sum_b[i - 1] + b[i - 1];
+    }
+
+    let mut ans = 0i64;
+    for i in 0..=n {
+        // a[0]..a[i], match the largest b's b[m - i]..b[m], total i numbers
+        // a[i]..a[n], match the smallest b's, b[0]..b[n - i], total n - i numbers
+
+        if (i == 0 || a[i - 1] <= b[m - i]) && (i == n || a[i] >= b[n - i - 1]) {
+            let cur = (sum_b[m] - sum_b[m - i]) - sum_a[i] + (sum_a[n] - sum_a[i]) - sum_b[n - i];
+            ans = ans.max(cur);
         }
     }
 
-    let mut ans = vec![0; 0];
-    let max_bit = *bits.last().unwrap();
-    let mut ans: Vec<i32> = (0..max_bit).collect();
-    bits.pop();
-    let mut counter = -(bits.len() as i32);
-    for bit_pos in bits {
-        let insert_pos = max_bit - bit_pos;
-        ans.insert(insert_pos as usize, counter);
-        counter += 1;
-    }
-
-    out.print_line(ans.len());
-    for ans_elem in ans {
-        out.print(ans_elem);
-        out.print(" ");
-    }
-    out.print_line("");
+    out.print_line(ans);
 }
 
 pub(crate) fn run(mut input: Input, mut output: Output) -> bool {
@@ -72,6 +69,12 @@ pub(crate) fn run(mut input: Input, mut output: Output) -> bool {
 }
 
 
+
+
+/*
+1 2 4 6
+1 2 3 3 5 7
+*/
 }
 pub mod algo_lib {
 pub mod io {

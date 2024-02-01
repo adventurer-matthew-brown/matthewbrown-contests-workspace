@@ -1,5 +1,16 @@
 [workspace]
 members = [
+    "d_very_different_array",
+    "c_sending_messages",
+    "b_arranging_cats",
+    "a_square",
+    "a_tricky_template",
+    "b_forming_triangles",
+    "c_closest_cities",
+    "d_berserk_monsters",
+    "b_abalanced_problemset",
+    "a_we_got_everything_covered",
+    "a_did_we_get_everything_covered",
     "e_increasing_subsequences",
     "main",
     "algo_lib",
