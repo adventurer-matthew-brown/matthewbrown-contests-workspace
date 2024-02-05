@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "f_replace_on_segment",
     "d_very_different_array",
     "c_sending_messages",
     "b_arranging_cats",
